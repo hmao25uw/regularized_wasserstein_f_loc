@@ -1,0 +1,49 @@
+seed = 12345
+
+[data]
+source = "simulation_gaussian"
+n = 2000
+sigma = 1.0
+prior = "two_point"
+mu1 = -2.0
+mu2 = 2.0
+w1 = 0.5
+
+[model]
+likelihood = "gaussian"
+sigma = 1.0
+
+[grid]
+mu_min = -6.0
+mu_max = 6.0
+mu_points = 241
+
+[estimand]
+h = "identity"
+z0_list = [-2.0, -1.0, 0.0, 1.0, 2.0]
+
+[localization]
+method = "wasserstein"
+alpha = 0.1
+
+# Finite-sample Wasserstein radius via DKW (bounded-support assumption).
+# IMPORTANT: The DKW-based W1 bound requires the true support of Z to be
+# contained in [support_min, support_max].
+#
+# For the Gaussian simulation, Z is unbounded, so this should be interpreted
+# as a *truncation* to match the LP grid. Use with care.
+radius_method = "dkw"
+support_min = -6.0
+support_max = 6.0
+
+# Grid for the LP discretization (t-grid)
+t_min = -6.0
+t_max = 6.0
+t_points = 301
+
+[solver]
+lp = "gurobi"
+conic = "clarabel"
+silent = true
+time_limit_sec = 600
+gurobi_threads = 1

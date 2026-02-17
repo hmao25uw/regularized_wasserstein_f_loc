@@ -1,0 +1,51 @@
+seed = 12345
+
+[data]
+source = "simulation_gaussian"
+n = 2000
+sigma = 1.0
+prior = "two_point"
+mu1 = -2.0
+mu2 = 2.0
+w1 = 0.5
+
+[model]
+likelihood = "gaussian"
+sigma = 1.0
+
+[grid]
+mu_min = -6.0
+mu_max = 6.0
+mu_points = 241
+
+[estimand]
+h = "identity"
+z0_list = [-2.0, -1.0, 0.0, 1.0, 2.0]
+
+[localization]
+method = "wasserstein"
+alpha = 0.1
+
+# Use the CLT-calibrated radius *for the smooth Wasserstein-1 distance*
+#   W^σ_1(μ, ν) := W_1(μ * η_σ, ν * η_σ)
+# where η_σ is a compactly-supported kernel.
+radius_method = "clt"
+B = 2000
+
+# Regularization controls the kernel smoothing
+regularization = "smooth"   # "none" | "smooth"
+smooth_sigma = 0.25         # kernel half-width σ
+kernel = "uniform"         # currently only "uniform"
+quad_points = 33            # trapezoidal points for convolving model CDF
+
+# Grid for the LP discretization (t-grid)
+t_min = -6.0
+t_max = 6.0
+t_points = 301
+
+[solver]
+lp = "gurobi"
+conic = "clarabel"
+silent = true
+time_limit_sec = 600
+gurobi_threads = 1

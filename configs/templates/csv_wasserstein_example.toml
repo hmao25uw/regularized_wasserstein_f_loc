@@ -1,0 +1,50 @@
+# Template: run Wasserstein F-localization on your own 1D CSV dataset.
+#
+# 1) Copy this file somewhere (or keep it here) and edit `path` + `column`.
+# 2) Adjust grids (`mu_grid` and `t_grid`) to cover your data.
+# 3) Run:
+#
+#   julia --project=. scripts/run_experiment.jl --config configs/templates/csv_wasserstein_example.toml --outdir results
+
+seed = 12345
+
+[data]
+source = "csv"
+path = "path/to/your_data.csv"
+column = "y"   # column containing the 1D numeric data
+
+[model]
+likelihood = "gaussian"
+sigma = 1.0     # set to your known/assumed noise sd
+
+[grid]
+# Grid for the latent μ distribution. A safe default is to cover the data range
+# with some padding.
+mu_min = -10.0
+mu_max = 10.0
+mu_points = 301
+
+[estimand]
+h = "identity"  # smooth estimands only; options: "identity", "square"
+z0_list = [-2.0, -1.0, 0.0, 1.0, 2.0]   # points where you want the CI
+
+[localization]
+method = "wasserstein"
+alpha = 0.1
+
+# Recommended for general (possibly unbounded) data:
+radius_method = "bootstrap"   # "bootstrap" | "clt" | "dkw"
+B = 2000
+
+# LP discretization grid for the Wasserstein constraints.
+# Choose a range that covers your data well.
+t_min = -10.0
+t_max = 10.0
+t_points = 401
+
+[solver]
+lp = "gurobi"
+conic = "clarabel"
+silent = true
+time_limit_sec = 600
+gurobi_threads = 1
