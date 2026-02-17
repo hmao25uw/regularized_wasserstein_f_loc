@@ -1,6 +1,6 @@
 # Kernel Regularized Wasserstein F-Localization Confidence Intervals for Lipschitz Functionals
 
-This repository implements **Kernel Regularized Wasserstein F-localization confidence intervals** 
+This repository implements **kernel regularized Wasserstein F-localization confidence intervals** 
 for empirical Bayes estimands (focused on **posterior mean**, i.e. Lipschitz targets) and adds a 
 modular **Wasserstein F-localization**. The original F-localization method was proposed by 
 **Nikos Ignatiadis** (UChicago) and **Stefan Wager** (Stanford) in their paper titled 
