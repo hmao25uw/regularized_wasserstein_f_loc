@@ -207,3 +207,18 @@ Notes:
   - `regularization = "smooth"`
   - `radius_method = "clt"`
   - `smooth_sigma = ...`
+
+## Acknowledgements
+
+This project includes code adapted from:
+- UpstreamProject by Upstream Authors: https://github.com/nignatiadis/Empirikos.jl
+  - Used from commit: <ecae57c>
+  - License: MIT
+  - Changes: refactored original, added methods for computing
+
+See THIRD_PARTY_NOTICES.md for detailed attributions and license texts.
+
+## License
+
+Unless otherwise noted, original code in this repository is licensed under <Your License>.
+Third-party code remains under its original license as listed in THIRD_PARTY_NOTICES.md.
