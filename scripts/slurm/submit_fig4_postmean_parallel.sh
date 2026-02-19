@@ -14,18 +14,27 @@
 
 set -euo pipefail
 
-# Defaults (keep in sync with Julia scripts)
+# Defaults (paper Figure-4 settings)
 OUTDIR="results/paper_fig4"
+N="5000"
+NREPS="400"
 ZMIN="-3.0"
 ZMAX="3.0"
 ZSTEP="0.2"
 
 # Parse a small subset of args so we can compute the job-array size.
+# We also default to the paper simulation settings unless the user overrides.
 PASSTHRU=()
+HAVE_N=0
+HAVE_NREPS=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --outdir)
       OUTDIR="$2"; PASSTHRU+=("$1" "$2"); shift 2 ;;
+    --n)
+      N="$2"; HAVE_N=1; PASSTHRU+=("$1" "$2"); shift 2 ;;
+    --nreps)
+      NREPS="$2"; HAVE_NREPS=1; PASSTHRU+=("$1" "$2"); shift 2 ;;
     --prior)
       # This submit helper always runs BOTH priors (spiky + negspiky) via a
       # (prior, z0) job-array mapping. Passing --prior would break that mapping.
@@ -41,6 +50,14 @@ while [[ $# -gt 0 ]]; do
       PASSTHRU+=("$1"); shift ;;
   esac
 done
+
+# If the user did not specify --n / --nreps, pass the paper defaults.
+if [[ $HAVE_N -eq 0 ]]; then
+  PASSTHRU+=("--n" "$N")
+fi
+if [[ $HAVE_NREPS -eq 0 ]]; then
+  PASSTHRU+=("--nreps" "$NREPS")
+fi
 
 # Compute number of z grid points K = round((ZMAX-ZMIN)/ZSTEP) + 1.
 K=$(python3 - <<PY
@@ -60,6 +77,7 @@ NTASKS=$((2 * K))
 
 echo "Submitting Figure-4 posterior-mean PARALLEL pipeline"
 echo "  OUTDIR=$OUTDIR"
+echo "  n=$N, nreps=$NREPS"
 echo "  z-grid: [$ZMIN:$ZSTEP:$ZMAX] => K=$K"
 echo "  array tasks: NTASKS=$NTASKS (2 priors × K points)"
 

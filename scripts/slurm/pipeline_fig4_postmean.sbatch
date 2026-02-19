@@ -1,6 +1,4 @@
 #!/bin/bash
-#SBATCH --account=foster
-#SBATCH --partition=compute
 #SBATCH --job-name=nbci_fig4
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
@@ -35,5 +33,18 @@ mkdir -p results/paper_fig4
 
 echo "SLURM job $SLURM_JOB_ID"
 echo "Running posterior mean simulation pipeline (Spiky + NegSpiky)."
+echo "Defaulting to paper settings: n=5000, nreps=400, z=-3:0.2:3 (override by passing CLI args to sbatch)."
 
-julia --project=. scripts/paper_fig4_postmean_pipeline.jl --outdir results/paper_fig4
+# NOTE:
+# - We pass the paper defaults first.
+# - Any user-supplied args (\"$@\") come last and therefore override defaults.
+
+julia --project=. scripts/paper_fig4_postmean_pipeline.jl \
+  --outdir results/paper_fig4 \
+  --n 5000 \
+  --nreps 400 \
+  --zmin -3.0 --zmax 3.0 --zstep 0.2 \
+  --alpha 0.05 \
+  --boot_B 500 \
+  --clt_B 2000 \
+  "$@"
