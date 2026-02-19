@@ -1,0 +1,55 @@
+SLURM job 33272135
+Running all configs in ./configs and then plotting.
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2779067
+Academic license 2779067 - for non-commercial use only - registered to hm___@uw.edu
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_dkw.toml
+z0 =   -2.000  CI = [-2.201367, -1.647020]
+z0 =   -1.000  CI = [-2.059766, -1.255133]
+z0 =    0.000  CI = [-0.771538,  0.661695]
+z0 =    1.000  CI = [ 1.227499,  2.092414]
+z0 =    2.000  CI = [ 1.689057,  2.244616]
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_gauss.toml
+z0 =   -2.000  CI = [-2.174119, -1.780119]
+z0 =   -1.000  CI = [-2.030931, -1.470677]
+z0 =    0.000  CI = [-0.592983,  0.479495]
+z0 =    1.000  CI = [ 1.478237,  2.106438]
+z0 =    2.000  CI = [ 1.852162,  2.245970]
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_wasserstein.toml
+z0 =   -2.000  CI = [-2.215918, -1.690929]
+z0 =   -1.000  CI = [-2.073405, -1.383467]
+z0 =    0.000  CI = [-0.691585,  0.544278]
+z0 =    1.000  CI = [ 1.401011,  2.102843]
+z0 =    2.000  CI = [ 1.751201,  2.271474]
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_wasserstein_clt.toml
+z0 =   -2.000  CI = [-2.204308, -1.703179]
+z0 =   -1.000  CI = [-2.065576, -1.405483]
+z0 =    0.000  CI = [-0.670035,  0.520989]
+z0 =    1.000  CI = [ 1.425346,  2.095332]
+z0 =    2.000  CI = [ 1.764142,  2.259931]
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_wasserstein_dkw.toml
+z0 =   -2.000  CI = [-2.828702, -1.036481]
+z0 =   -1.000  CI = [-2.462854, -0.392768]
+z0 =    0.000  CI = [-1.472169,  1.424242]
+z0 =    1.000  CI = [ 0.347650,  2.464638]
+z0 =    2.000  CI = [ 1.066450,  2.888150]
+============================================================
+Running config: /mmfs1/home/hmao25/regularized_wasserstein_f_loc/scripts/../configs/gaussian_sim_wasserstein_smooth_clt.toml
+z0 =   -2.000  CI = [-2.205662, -1.701958]
+z0 =   -1.000  CI = [-2.068312, -1.401047]
+z0 =    0.000  CI = [-0.674695,  0.519778]
+z0 =    1.000  CI = [ 1.415344,  2.097383]
+z0 =    2.000  CI = [ 1.763371,  2.260874]
+============================================================
+Plotting results into: results/plots
+Running real-data experiment: prostate z-scores (Figure 2-style).
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2779067
+Academic license 2779067 - for non-commercial use only - registered to hm___@uw.edu

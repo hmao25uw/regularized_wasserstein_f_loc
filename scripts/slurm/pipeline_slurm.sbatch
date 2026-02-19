@@ -1,4 +1,6 @@
 #!/bin/bash
+#SBATCH --account=foster
+#SBATCH --partition=compute
 #SBATCH --job-name=nbci
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
