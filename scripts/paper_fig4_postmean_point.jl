@@ -43,6 +43,8 @@ function parse_args(args)
         "taskid" => nothing,         # optional; otherwise reads SLURM_ARRAY_TASK_ID
         "prior" => nothing,          # optional override for manual runs
         "zindex" => nothing,         # 1-based index into z0_grid
+        "block" => nothing,          # 1-based replicate block index (optional)
+        "block_size" => nothing,     # size of replicate blocks (optional; otherwise read from meta)
         # (Optional sanity checks; values are read from the precompute cache)
         "n" => nothing,
         "nreps" => nothing,
@@ -73,6 +75,10 @@ function parse_args(args)
             d["prior"] = lowercase(String(args[i+1])); i += 2
         elseif a == "--zindex"
             d["zindex"] = parse(Int, args[i+1]); i += 2
+        elseif a == "--block"
+            d["block"] = parse(Int, args[i+1]); i += 2
+        elseif a == "--block_size"
+            d["block_size"] = parse(Int, args[i+1]); i += 2
         elseif a == "--lp_time_limit"
             d["lp_time_limit"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--gurobi_threads"
@@ -167,16 +173,36 @@ function main(args=ARGS)
     K = length(z0_grid)
     K > 0 || error("meta.z0_grid is empty")
 
-    # Resolve which (prior, zindex) this task should run.
+    # Replicate-block parallelization (optional)
+    nreps_total = hasproperty(meta, :nreps) ? Int(meta.nreps) : nothing
+    nreps_total === nothing && error("meta.nreps missing from meta file")
+    block_size = if d["block_size"] !== nothing
+        Int(d["block_size"])
+    elseif hasproperty(meta, :block_size)
+        Int(meta.block_size)
+    else
+        nreps_total
+    end
+    block_size > 0 || error("block_size must be positive")
+    nblocks = if hasproperty(meta, :nblocks)
+        Int(meta.nblocks)
+    else
+        Int(cld(nreps_total, block_size))
+    end
+
+    # Resolve which (prior, zindex, block) this task should run.
     prior = d["prior"]
     zindex = d["zindex"]
+    block = d["block"]
 
     if prior !== nothing || zindex !== nothing
-        # Manual mode: require both.
+        # Manual mode: require both (prior, zindex). Block is optional.
         prior === nothing && error("Manual mode requires --prior")
         zindex === nothing && error("Manual mode requires --zindex")
         prior in priors || error("Unknown prior=$prior. Expected one of $(priors)")
         (1 <= zindex <= K) || error("zindex must be in 1:$K")
+        block = (block === nothing) ? 1 : Int(block)
+        (1 <= block <= nblocks) || error("block must be in 1:$nblocks")
     else
         # SLURM array mode: use taskid or SLURM_ARRAY_TASK_ID.
         taskid = d["taskid"]
@@ -185,16 +211,22 @@ function main(args=ARGS)
             taskid = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
         end
         taskid >= 1 || error("taskid must be >= 1")
-        ntasks = length(priors) * K
+        ntasks = length(priors) * K * nblocks
         taskid <= ntasks || error("taskid=$taskid exceeds ntasks=$ntasks")
 
         idx0 = taskid - 1
-        prior_idx = div(idx0, K) + 1
-        zindex = mod(idx0, K) + 1
+        prior_idx = div(idx0, K * nblocks) + 1
+        rem = mod(idx0, K * nblocks)
+        zindex = div(rem, nblocks) + 1
+        block = mod(rem, nblocks) + 1
         prior = priors[prior_idx]
     end
 
     z0 = z0_grid[zindex]
+
+    # Replicate slice for this block
+    rep_start = (block - 1) * block_size + 1
+    rep_end = min(block * block_size, nreps_total)
 
     # Load precomputed stats for this prior.
     cache_path = joinpath(pre_dir, "postmean_stats_$(prior).jls")
@@ -233,7 +265,7 @@ function main(args=ARGS)
         error("Arg mismatch: --quad_points=$(d[\"quad_points\"]) but precompute used quad_points=$(pre.quad_points)")
     end
 
-    @info "Point job starting" prior=prior zindex=zindex z0=z0 nreps=pre.nreps
+    @info "Point job starting" prior=prior zindex=zindex z0=z0 block=block rep_start=rep_start rep_end=rep_end nreps_total=nreps_total
 
     # EB setup (same as sequential script)
     σ = 1.0
@@ -334,8 +366,9 @@ function main(args=ARGS)
         end
     end
 
-    tick = max(1, Int(floor(nreps / 10)))
-    for rep in 1:nreps
+    reps_in_block = rep_end - rep_start + 1
+    tick = max(1, Int(floor(reps_in_block / 10)))
+    for rep in rep_start:rep_end
         # Build per-method stats for this replicate from cached arrays
         stats_list = NamedTuple[
             (t_grid=t_grid,    Fhat=view(Fhat_dkw, rep, :),    eps=eps_dkw[rep]),
@@ -361,41 +394,38 @@ function main(args=ARGS)
             end
         end
 
-        if rep % tick == 0 || rep == 1 || rep == nreps
-            @info("point progress", prior=prior, z0=z0, rep=rep, nreps=nreps)
-        end
-    end
-
-    lower_mean = fill(NaN, M)
-    upper_mean = fill(NaN, M)
-    coverage = fill(NaN, M)
-    for midx in 1:M
-        if valid_cnt[midx] > 0
-            lower_mean[midx] = lower_sum[midx] / valid_cnt[midx]
-            upper_mean[midx] = upper_sum[midx] / valid_cnt[midx]
-            coverage[midx] = cover_cnt[midx] / valid_cnt[midx]
+        # Report progress relative to this block
+        if (rep - rep_start + 1) % tick == 0 || rep == rep_start || rep == rep_end
+            @info("point progress", prior=prior, z0=z0, block=block, rep=rep, rep_start=rep_start, rep_end=rep_end)
         end
     end
 
     if any(fail_cnt .> 0)
-        @warn "Some CI solves failed and were skipped in averages" prior=prior z0=z0 fail_cnt=fail_cnt valid_cnt=valid_cnt
+        @warn "Some CI solves failed and were skipped" prior=prior z0=z0 block=block fail_cnt=fail_cnt valid_cnt=valid_cnt
     end
 
+    # Write partial *sums* for this (prior, z0, block). Aggregation computes
+    # final means/coverage by summing across blocks.
     df = DataFrame(
         prior = fill(String(pre.prior_label), M),
         prior_key = fill(String(pre.prior_key), M),
         method = [m.name for m in methods],
         z0 = fill(z0, M),
-        lower = vec(lower_mean),
-        upper = vec(upper_mean),
-        coverage = vec(coverage),
-        theta_true = fill(θ_true, M),
+        lower_sum = vec(lower_sum),
+        upper_sum = vec(upper_sum),
+        cover_cnt = cover_cnt,
         n_valid = valid_cnt,
         n_failed = fail_cnt,
+        theta_true = fill(θ_true, M),
+        rep_start = fill(rep_start, M),
+        rep_end = fill(rep_end, M),
+        block = fill(block, M),
+        block_size = fill(block_size, M),
+        nreps_total = fill(nreps_total, M),
     )
 
     partial_dir = ensure_dir(joinpath(outdir, "partial"))
-    outpath = joinpath(partial_dir, @sprintf("postmean_point_%s_zidx%03d.csv", String(pre.prior_key), zindex))
+    outpath = joinpath(partial_dir, @sprintf("postmean_point_%s_zidx%03d_block%03d.csv", String(pre.prior_key), zindex, block))
     CSV.write(outpath, df)
     @info "Wrote partial" path=outpath
 end

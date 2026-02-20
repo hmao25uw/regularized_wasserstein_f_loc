@@ -147,24 +147,52 @@ The script looks for `data/prostate/prostz.txt`. If missing, it will try to auto
 If your cluster disallows outbound internet, download `prostz.txt` manually and place it at
 `data/prostate/prostz.txt` (see `data/prostate/README.md`).
 
+On SLURM you can run it via:
+
+```bash
+sbatch scripts/slurm/fig2_prostate.sbatch
+```
+
 ### SLURM (recommended): parallel Figure-4 posterior mean via job arrays
 
 For large `nreps` (e.g. 4000) the Figure-4 posterior-mean simulation can be
 slow if run as one sequential SLURM job. The repository includes a **job-array**
-workflow that parallelizes across the z-grid points.
+workflow that parallelizes across:
+
+- the z-grid points, and
+- **replicate blocks** (e.g. 100 Monte Carlo replicates per task)
 
 This pipeline submits:
 
 1. A **precompute** job that simulates the datasets and caches *all*
    data-dependent localization quantities (empirical CDF/KDE + radii) to disk.
-2. A **job array** with one task per *(prior, z0-grid-point)* to solve the LPs.
+2. A **job array** with one task per *(prior, z0-grid-point, replicate-block)*
+   to solve the LPs.
 3. A final **aggregate** job that merges partial outputs and produces the same
    four plots as the sequential pipeline.
 
 Submit from the login node:
 
 ```bash
-bash scripts/slurm/submit_fig4_postmean_parallel.sh --outdir results/paper_fig4 --nreps 4000
+bash scripts/slurm/submit_fig4_postmean_parallel.sh --outdir results/paper_fig4 --nreps 400
+```
+
+By default the submit helper uses:
+
+- `--block_size 100` (≈ 100 replicates per array task)
+- `--max_concurrent 6` (≈ up to 6 array tasks at once, i.e. no more than ~6 nodes)
+
+You can override these:
+
+```bash
+bash scripts/slurm/submit_fig4_postmean_parallel.sh --outdir results/paper_fig4 --nreps 400 --block_size 50 --max_concurrent 6
+```
+
+If you prefer `sbatch` for submission, you can also submit the included
+submitter job:
+
+```bash
+sbatch scripts/slurm/fig4_postmean_submit_parallel.sbatch
 ```
 
 The final outputs are written to the **same** locations as the sequential run:

@@ -50,6 +50,13 @@ function parse_args(args)
         # Calibration settings
         "boot_B" => 500,
         "clt_B" => 2000,
+        # SLURM parallelization:
+        # We split the nreps replicates into blocks and let each job-array task
+        # process one (prior, z0, block) triple.
+        #
+        # This value is only used to write metadata to disk (it does NOT affect
+        # the computed radii / stats).
+        "block_size" => 100,
         # Discretization grids
         "mu_min" => -6.0,
         "mu_max" => 6.0,
@@ -96,6 +103,8 @@ function parse_args(args)
             d["boot_B"] = parse(Int, args[i+1]); i += 2
         elseif a == "--clt_B"
             d["clt_B"] = parse(Int, args[i+1]); i += 2
+        elseif a == "--block_size"
+            d["block_size"] = parse(Int, args[i+1]); i += 2
         elseif a == "--mu_min"
             d["mu_min"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--mu_max"
@@ -427,6 +436,8 @@ function main(args=ARGS)
         alpha = first_payload.alpha,
         n = first_payload.n,
         nreps = first_payload.nreps,
+        block_size = Int(d["block_size"]),
+        nblocks = Int(cld(Int(first_payload.nreps), Int(d["block_size"]))),
     )
     pre_dir = ensure_dir(joinpath(outdir, "precompute"))
     meta_path = joinpath(pre_dir, "postmean_meta.jls")

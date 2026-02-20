@@ -47,6 +47,7 @@ function parse_args(args)
         "zstep" => nothing,
         "boot_B" => nothing,
         "clt_B" => nothing,
+        "block_size" => nothing,
         "gauss_bw" => nothing,
         "smooth_sigma" => nothing,
         "quad_points" => nothing,
@@ -61,6 +62,7 @@ function parse_args(args)
             d["outdir"] = String(args[i+1]); i += 2
         elseif a in ("--prior", "--n", "--nreps", "--alpha", "--seed",
                      "--zmin", "--zmax", "--zstep", "--boot_B", "--clt_B",
+                     "--block_size",
                      "--gauss_bw", "--smooth_sigma", "--quad_points",
                      "--lp_time_limit", "--gurobi_threads", "--gurobi_seed")
             # Ignore (advance by 2 for flags that expect a value)
@@ -92,7 +94,7 @@ function method_style(method::AbstractString)
 end
 
 
-function aggregate_one_prior(outdir::String, prior_key::String)
+function aggregate_one_prior(outdir::String, prior_key::String; block_size::Int)
     pre_dir = joinpath(outdir, "precompute")
     stats_path = joinpath(pre_dir, "postmean_stats_$(prior_key).jls")
     isfile(stats_path) || error("Missing precompute cache: $stats_path")
@@ -107,13 +109,63 @@ function aggregate_one_prior(outdir::String, prior_key::String)
     partial_dir = joinpath(outdir, "partial")
     isdir(partial_dir) || error("Missing partial directory: $partial_dir")
 
-    # Read partials (one file per z-index)
-    df_all = DataFrame()
+    # Read partials (one file per (z-index, block)) and aggregate across blocks
+    nreps = Int(pre.nreps)
+    nblocks = Int(cld(nreps, block_size))
+
+    df_all = DataFrame(
+        prior = String[],
+        prior_key = String[],
+        method = String[],
+        z0 = Float64[],
+        lower = Float64[],
+        upper = Float64[],
+        coverage = Float64[],
+        theta_true = Float64[],
+        n_valid = Int[],
+        n_failed = Int[],
+    )
+
     for k in 1:K
-        path = joinpath(partial_dir, @sprintf("postmean_point_%s_zidx%03d.csv", prior_key, k))
-        isfile(path) || error("Missing partial file: $path")
-        dfk = CSV.read(path, DataFrame)
-        df_all = isempty(df_all) ? dfk : vcat(df_all, dfk)
+        # Accumulate block files for this z-index
+        df_blocks = DataFrame()
+        for b in 1:nblocks
+            path = joinpath(partial_dir, @sprintf("postmean_point_%s_zidx%03d_block%03d.csv", prior_key, k, b))
+            isfile(path) || error("Missing partial file: $path")
+            dfb = CSV.read(path, DataFrame)
+            df_blocks = isempty(df_blocks) ? dfb : vcat(df_blocks, dfb)
+        end
+
+        # Group by method and sum across blocks
+        g = groupby(df_blocks, :method)
+        for sub in g
+            meth = String(first(sub.method))
+            z0 = Float64(first(sub.z0))
+            θ = Float64(first(sub.theta_true))
+
+            n_valid = Int(sum(sub.n_valid))
+            n_failed = Int(sum(sub.n_failed))
+            lower_sum = sum(Float64.(sub.lower_sum))
+            upper_sum = sum(Float64.(sub.upper_sum))
+            cover_cnt = Int(sum(sub.cover_cnt))
+
+            lo = n_valid > 0 ? lower_sum / n_valid : NaN
+            hi = n_valid > 0 ? upper_sum / n_valid : NaN
+            cov = n_valid > 0 ? cover_cnt / n_valid : NaN
+
+            push!(df_all, (
+                prior = String(pre.prior_label),
+                prior_key = prior_key,
+                method = meth,
+                z0 = z0,
+                lower = lo,
+                upper = hi,
+                coverage = cov,
+                theta_true = θ,
+                n_valid = n_valid,
+                n_failed = n_failed,
+            ))
+        end
     end
 
     # Ensure sorting by z0 then method
@@ -222,9 +274,12 @@ function main(args=ARGS)
         deserialize(io)
     end
 
+    # Replicate-block settings (stored by precompute stage)
+    block_size = hasproperty(meta, :block_size) ? Int(meta.block_size) : Int(meta.nreps)
+
     priors = Vector{String}(meta.priors)
     for pr in priors
-        aggregate_one_prior(outdir, pr)
+        aggregate_one_prior(outdir, pr; block_size=block_size)
     end
     @info "Aggregation complete" outdir=outdir
 end

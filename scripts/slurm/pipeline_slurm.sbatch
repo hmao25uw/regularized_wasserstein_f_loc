@@ -1,22 +1,21 @@
 #!/bin/bash
-#SBATCH --job-name=nbci_paper
+#SBATCH --job-name=nbci_paper_submit
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
-#SBATCH --time=24:00:00
+#SBATCH --time=00:15:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=12G
+#SBATCH --mem=1G
 
 # ----------------------------------------------------------------------
-# PAPER-REPLICATION SLURM pipeline for NonparBayesCI
+# PAPER-REPLICATION SUBMITTER for NonparBayesCI
 #
-# This script is intended to produce the *paper-style* results you asked for:
-#   1) Figure-4 style posterior-mean simulation (Spiky + NegSpiky)
-#   2) Prostate real-data experiment (Figure-2 style)
+# This file is now a *submitter* job (fast) that submits TWO separate jobs:
+#   1) Figure-4 posterior-mean simulation (parallel, multi-node via job arrays)
+#   2) Prostate real-data experiment (single job)
 #
-# IMPORTANT:
-#   - The original Ignatiadis & Wager (2021) Fig-4 simulation uses:
-#       n = 5000, nreps = 400, z-grid = -3:0.2:3
-#   - We call the corresponding Julia pipeline with those settings.
+# If you want to run them individually, submit:
+#   sbatch scripts/slurm/fig4_postmean_submit_parallel.sbatch
+#   sbatch scripts/slurm/fig2_prostate.sbatch
 #
 # If you want the small "smoke-test" configs under ./configs instead, run:
 #   sbatch scripts/slurm/pipeline_smoke_slurm.sbatch
@@ -35,31 +34,18 @@ cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
 mkdir -p results
 
-echo "SLURM job $SLURM_JOB_ID"
+echo "SLURM submitter job $SLURM_JOB_ID"
+echo "Submitting Figure-4 posterior-mean (parallel) and prostate real-data jobs..."
 
-# -------------------------
-# Figure 4: posterior mean
-# -------------------------
+# Submit simulation (parallel pipeline)
+FIG4_JOB=$(sbatch --parsable scripts/slurm/fig4_postmean_submit_parallel.sbatch)
+echo "  submitted fig4 submitter job: $FIG4_JOB"
 
-echo "Running Figure-4 posterior-mean pipeline (paper settings: n=5000, nreps=400, z=-3:0.2:3)."
-mkdir -p results/paper_fig4
+# Submit prostate (real data)
+PROSTATE_JOB=$(sbatch --parsable scripts/slurm/fig2_prostate.sbatch)
+echo "  submitted prostate job: $PROSTATE_JOB"
 
-julia --project=. scripts/paper_fig4_postmean_pipeline.jl \
-  --outdir results/paper_fig4 \
-  --n 5000 \
-  --nreps 400 \
-  --zmin -3.0 --zmax 3.0 --zstep 0.2 \
-  --alpha 0.05 \
-  --boot_B 500 \
-  --clt_B 2000
-
-# -------------------------
-# Figure 2: prostate (real data)
-# -------------------------
-
-echo "Running real-data experiment: prostate z-scores (Figure 2-style)."
-mkdir -p results/paper_fig2_prostate
-
-julia --project=. scripts/paper_fig2_prostate.jl --outdir results/paper_fig2_prostate
-
-echo "Done. See results/ for outputs."
+echo
+echo "Monitor with: squeue -j $FIG4_JOB,$PROSTATE_JOB"
+echo "Figure-4 results will end up in: results/paper_fig4"
+echo "Prostate results will end up in: results/paper_fig2_prostate"
