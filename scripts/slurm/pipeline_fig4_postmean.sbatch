@@ -23,7 +23,7 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
 # Example module loads (edit as needed)
-# module load julia/1.10
+module load elbert/julia/1.11.1/1.11.1
 # module load gurobi
 
 # If needed, set license path

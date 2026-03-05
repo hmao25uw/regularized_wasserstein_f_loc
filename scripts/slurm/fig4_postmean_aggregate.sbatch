@@ -11,7 +11,7 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
 # Example module loads (edit for your cluster)
-# module load julia/1.10
+module load elbert/julia/1.11.1/1.11.1
 
 echo "SLURM job $SLURM_JOB_ID"
 echo "Aggregating partial Figure-4 posterior-mean results and producing plots"

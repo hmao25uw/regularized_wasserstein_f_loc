@@ -21,8 +21,7 @@ set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-# Example module loads (edit for your cluster)
-# module load julia/1.10
+module load elbert/julia/1.11.1/1.11.1
 
 # If needed, set Gurobi license path (LPs are solved with Gurobi, conic with Clarabel)
 # export GRB_LICENSE_FILE=/path/to/gurobi.lic
