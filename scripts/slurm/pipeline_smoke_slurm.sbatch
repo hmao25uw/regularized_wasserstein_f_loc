@@ -1,4 +1,6 @@
 #!/bin/bash
+#SBATCH --account=foster
+#SBATCH --partition=compute
 #SBATCH --job-name=nbci_smoke
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
@@ -33,7 +35,7 @@ cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
 # Example module loads (edit as needed)
 module load elbert/julia/1.11.1/1.11.1
-# module load gurobi
+export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
 
 # If needed, set license path
 # export GRB_LICENSE_FILE=/path/to/gurobi.lic

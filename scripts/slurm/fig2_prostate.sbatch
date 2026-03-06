@@ -1,4 +1,6 @@
 #!/bin/bash
+#SBATCH --account=foster
+#SBATCH --partition=compute
 #SBATCH --job-name=nbci_prostate
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
@@ -24,7 +26,7 @@ cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 module load elbert/julia/1.11.1/1.11.1
 
 # If needed, set Gurobi license path (LPs are solved with Gurobi, conic with Clarabel)
-# export GRB_LICENSE_FILE=/path/to/gurobi.lic
+export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
 
 OUTDIR="results/paper_fig2_prostate"
 

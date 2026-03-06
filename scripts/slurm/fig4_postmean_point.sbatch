@@ -1,4 +1,6 @@
 #!/bin/bash
+#SBATCH --account=foster
+#SBATCH --partition=compute
 #SBATCH --job-name=nbci_fig4_pt
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
@@ -11,9 +13,9 @@ set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-# Example module loads (edit for your cluster)
+# Load module and prepare gurobi
 module load elbert/julia/1.11.1/1.11.1
-module load gurobi
+export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
 
 # If needed, set license path
 # export GRB_LICENSE_FILE=/path/to/gurobi.lic
