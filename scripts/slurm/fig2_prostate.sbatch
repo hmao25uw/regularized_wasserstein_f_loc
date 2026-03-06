@@ -6,7 +6,7 @@
 #SBATCH --error=%x_%j.err
 #SBATCH --time=02:00:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=6G
+#SBATCH --mem=12G
 
 # ----------------------------------------------------------------------
 # Real-data experiment: Prostate z-scores (Figure 2-style)

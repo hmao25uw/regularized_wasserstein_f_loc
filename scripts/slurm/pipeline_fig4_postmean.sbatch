@@ -6,7 +6,7 @@
 #SBATCH --error=%x_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 
 # ----------------------------------------------------------------------
 # SLURM pipeline for the *posterior mean* simulation (Figure 4-style)
