@@ -6,7 +6,7 @@
 #SBATCH --error=%x_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=8G
 
 # ----------------------------------------------------------------------
 # SLURM pipeline for the *posterior mean* simulation (Figure 4-style)
@@ -22,14 +22,15 @@
 
 set -euo pipefail
 
+
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-# Example module loads (edit as needed)
 module load elbert/julia/1.11.1/1.11.1
 export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
 
-# If needed, set license path
-# export GRB_LICENSE_FILE=/path/to/gurobi.lic
+# Cluster environment setup (Julia + optional Gurobi module). See:
+#   scripts/slurm/_setup_env.sh
+source scripts/slurm/_setup_env.sh
 
 mkdir -p results/paper_fig4
 

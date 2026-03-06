@@ -6,7 +6,7 @@
 #SBATCH --error=%x_%j.err
 #SBATCH --time=02:00:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=12G
+#SBATCH --mem=6G
 
 # ----------------------------------------------------------------------
 # Real-data experiment: Prostate z-scores (Figure 2-style)
@@ -22,11 +22,12 @@
 set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
-
 module load elbert/julia/1.11.1/1.11.1
-
-# If needed, set Gurobi license path (LPs are solved with Gurobi, conic with Clarabel)
 export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
+
+# Cluster environment setup (Julia + optional Gurobi module). See:
+#   scripts/slurm/_setup_env.sh
+source scripts/slurm/_setup_env.sh
 
 OUTDIR="results/paper_fig2_prostate"
 

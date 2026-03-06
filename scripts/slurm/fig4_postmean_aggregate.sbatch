@@ -10,10 +10,14 @@
 
 set -euo pipefail
 
-cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-# Example module loads (edit for your cluster)
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 module load elbert/julia/1.11.1/1.11.1
+export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
+
+# Cluster environment setup (Julia + optional Gurobi module). See:
+#   scripts/slurm/_setup_env.sh
+source scripts/slurm/_setup_env.sh
 
 echo "SLURM job $SLURM_JOB_ID"
 echo "Aggregating partial Figure-4 posterior-mean results and producing plots"

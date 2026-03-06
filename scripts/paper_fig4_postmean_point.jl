@@ -237,32 +237,46 @@ function main(args=ARGS)
 
     # Optional sanity checks (useful when passing a shared arg list via the
     # SLURM submit helper).
+    # NOTE (Julia parsing gotcha): do NOT escape quotes inside a `$(...)` interpolation
+    # expression. Writing `$(d[\"n\"])` makes the backslash `\` appear in the expression,
+    # and Julia parses it as the left-division operator, which triggers:
+    #   syntax: "\\" is not a unary operator
+    # Use `$(d["n"])` instead.
     if d["n"] !== nothing && Int(d["n"]) != Int(pre.n)
-        error("Arg mismatch: --n=$(d[\"n\"]) but precompute used n=$(pre.n)")
+        n_arg = d["n"]
+        error("Arg mismatch: --n=$(n_arg) but precompute used n=$(pre.n)")
     end
     if d["nreps"] !== nothing && Int(d["nreps"]) != Int(pre.nreps)
-        error("Arg mismatch: --nreps=$(d[\"nreps\"]) but precompute used nreps=$(pre.nreps)")
+        nreps_arg = d["nreps"]
+        error("Arg mismatch: --nreps=$(nreps_arg) but precompute used nreps=$(pre.nreps)")
     end
     if d["alpha"] !== nothing && abs(Float64(d["alpha"]) - Float64(pre.alpha)) > 1e-12
-        error("Arg mismatch: --alpha=$(d[\"alpha\"]) but precompute used alpha=$(pre.alpha)")
+        alpha_arg = d["alpha"]
+        error("Arg mismatch: --alpha=$(alpha_arg) but precompute used alpha=$(pre.alpha)")
     end
     if d["seed"] !== nothing && Int(d["seed"]) != Int(pre.seed)
-        error("Arg mismatch: --seed=$(d[\"seed\"]) but precompute used seed=$(pre.seed)")
+        seed_arg = d["seed"]
+        error("Arg mismatch: --seed=$(seed_arg) but precompute used seed=$(pre.seed)")
     end
     if d["boot_B"] !== nothing && Int(d["boot_B"]) != Int(pre.boot_B)
-        error("Arg mismatch: --boot_B=$(d[\"boot_B\"]) but precompute used boot_B=$(pre.boot_B)")
+        bootB_arg = d["boot_B"]
+        error("Arg mismatch: --boot_B=$(bootB_arg) but precompute used boot_B=$(pre.boot_B)")
     end
     if d["clt_B"] !== nothing && Int(d["clt_B"]) != Int(pre.clt_B)
-        error("Arg mismatch: --clt_B=$(d[\"clt_B\"]) but precompute used clt_B=$(pre.clt_B)")
+        cltB_arg = d["clt_B"]
+        error("Arg mismatch: --clt_B=$(cltB_arg) but precompute used clt_B=$(pre.clt_B)")
     end
     if d["gauss_bw"] !== nothing && abs(Float64(d["gauss_bw"]) - Float64(pre.gauss_bw)) > 1e-12
-        error("Arg mismatch: --gauss_bw=$(d[\"gauss_bw\"]) but precompute used gauss_bw=$(pre.gauss_bw)")
+        bw_arg = d["gauss_bw"]
+        error("Arg mismatch: --gauss_bw=$(bw_arg) but precompute used gauss_bw=$(pre.gauss_bw)")
     end
     if d["smooth_sigma"] !== nothing && abs(Float64(d["smooth_sigma"]) - Float64(pre.smooth_sigma)) > 1e-12
-        error("Arg mismatch: --smooth_sigma=$(d[\"smooth_sigma\"]) but precompute used smooth_sigma=$(pre.smooth_sigma)")
+        sig_arg = d["smooth_sigma"]
+        error("Arg mismatch: --smooth_sigma=$(sig_arg) but precompute used smooth_sigma=$(pre.smooth_sigma)")
     end
     if d["quad_points"] !== nothing && Int(d["quad_points"]) != Int(pre.quad_points)
-        error("Arg mismatch: --quad_points=$(d[\"quad_points\"]) but precompute used quad_points=$(pre.quad_points)")
+        quad_arg = d["quad_points"]
+        error("Arg mismatch: --quad_points=$(quad_arg) but precompute used quad_points=$(pre.quad_points)")
     end
 
     @info "Point job starting" prior=prior zindex=zindex z0=z0 block=block rep_start=rep_start rep_end=rep_end nreps_total=nreps_total

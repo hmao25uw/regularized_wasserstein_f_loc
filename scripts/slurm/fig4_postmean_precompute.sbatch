@@ -6,18 +6,16 @@
 #SBATCH --error=%x_%j.err
 #SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=8G
 
 set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
-
-# Example module loads (edit for your cluster)
 module load elbert/julia/1.11.1/1.11.1
 export GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
-
-# If needed, set license path
-# export GRB_LICENSE_FILE=/path/to/gurobi.lic
+# Cluster environment setup (Julia + optional Gurobi module). See:
+#   scripts/slurm/_setup_env.sh
+source scripts/slurm/_setup_env.sh
 
 echo "SLURM job $SLURM_JOB_ID"
 echo "Precomputing localization radii + stats for Figure-4 posterior-mean simulation"
