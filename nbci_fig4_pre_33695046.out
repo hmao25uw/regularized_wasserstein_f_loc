@@ -1,0 +1,5 @@
+[env] julia at: /sw/contrib/elbert-src/julia/1.11.1/julia-1.11.1/bin/julia
+julia version 1.11.1
+[env] GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
+SLURM job 33695046
+Precomputing localization radii + stats for Figure-4 posterior-mean simulation
