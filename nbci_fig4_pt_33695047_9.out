@@ -1,9 +1,0 @@
-[env] julia at: /sw/contrib/elbert-src/julia/1.11.1/julia-1.11.1/bin/julia
-julia version 1.11.1
-[env] GRB_LICENSE_FILE=/mmfs1/home/hmao25/gurobi.lic
-SLURM job 33699326 (array task 9)
-Running one (prior, z0, block) point job
-Set parameter WLSAccessID
-Set parameter WLSSecret
-Set parameter LicenseID to value 2779067
-Academic license 2779067 - for non-commercial use only - registered to hm___@uw.edu
