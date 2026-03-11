@@ -437,6 +437,54 @@ function run_one_prior(; prior::String,
     # ------------------------------------------------------------------
     # Plot 1: CI bands
     # ------------------------------------------------------------------
+    # --- New plotting controls for CI-band figure ---
+
+    const NO_RIBBON_METHODS = Set(["DKW-F", "Gauss-F", "W₁ (DKW)"])
+    const RIBBON_METHODS = Set(["W₁ (boot)", "W₁ (CLT)", "Smooth-W₁ (CLT)"])
+    const RIBBON_FILLALPHA = 0.10
+
+    function method_color(method::AbstractString)
+        if method == "DKW-F"
+            return :darkorange
+        elseif method == "Gauss-F"
+            return :dodgerblue
+        elseif method == "W₁ (DKW)"
+            return :mediumpurple
+        elseif method == "W₁ (boot)"
+            return :forestgreen
+        elseif method == "W₁ (CLT)"
+            return :crimson
+        elseif method == "Smooth-W₁ (CLT)"
+            return :teal
+        else
+            return :black
+        end
+    end
+
+    function method_lw(method::AbstractString)
+        return method in RIBBON_METHODS ? 4 : 2.5
+    end
+
+    function method_linealpha(method::AbstractString)
+        return method in RIBBON_METHODS ? 1.0 : 0.65
+    end
+
+    function method_style_band(method::AbstractString)
+        if method in ("DKW-F", "Gauss-F")
+            return :dot
+        elseif method == "W₁ (DKW)"
+            return :dash
+        elseif method == "W₁ (boot)"
+            return :solid
+        elseif method == "W₁ (CLT)"
+            return :dash
+        elseif method == "Smooth-W₁ (CLT)"
+            return :dashdot
+        else
+            return :solid
+        end
+    end
+
     p_band = plot(
         xlabel = "z",
         ylabel = "posterior mean θ(z)",
@@ -444,17 +492,37 @@ function run_one_prior(; prior::String,
         legend = :topleft,
     )
 
-    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=2)
+    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=4)
 
     for (midx, meth) in enumerate(methods)
-        center = (lower_mean[midx, :] .+ upper_mean[midx, :]) ./ 2
-        ribbon = (upper_mean[midx, :] .- lower_mean[midx, :]) ./ 2
-        plot!(p_band, z0_grid, center;
-              ribbon=ribbon,
-              label=meth.name,
-              linestyle=meth.linestyle,
-              lw=2,
-              marker=:none)
+        name = String(meth.name)
+
+        col = method_color(name)
+        lw  = method_lw(name)
+        la  = method_linealpha(name)
+        ls  = method_style_band(name)
+
+        if name in NO_RIBBON_METHODS
+            plot!(p_band, z0_grid, vec(lower_mean[midx, :]);
+                label="",
+                color=col, linestyle=ls, lw=lw,
+                linealpha=la, marker=:none)
+
+            plot!(p_band, z0_grid, vec(upper_mean[midx, :]);
+                label=name,
+                color=col, linestyle=ls, lw=lw,
+                linealpha=la, marker=:none)
+        else
+            center = (lower_mean[midx, :] .+ upper_mean[midx, :]) ./ 2
+            ribbon = (upper_mean[midx, :] .- lower_mean[midx, :]) ./ 2
+
+            plot!(p_band, z0_grid, vec(center);
+                ribbon=vec(ribbon),
+                fillalpha=RIBBON_FILLALPHA,
+                label=name,
+                color=col, linestyle=ls, lw=lw,
+                linealpha=la, marker=:none)
+        end
     end
 
     band_path = joinpath(plots_dir, "postmean_ci_bands_$(lowercase(spec.label)).png")
