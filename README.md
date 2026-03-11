@@ -17,7 +17,10 @@ Some important difference are listed below:
   - set `[localization] regularization = "smooth"` and provide `smooth_sigma`
   - currently supports `radius_method = "clt"` via `wasserstein_smooth_clt`
 
-We removed the AMARI method and do not include non-smooth estimands (e.g., indicator-type functionals) in the example experiment configs.
+We removed the AMARI method and do not include non-smooth estimands 
+(e.g., indicator-type functionals) in the example experiment configs. The project 
+was designed to run on the hyak cluster using SLURM workload manager, but can be
+adapted to other clusters as well by modifying the top directives.
 
 ## Quick start (local)
 
