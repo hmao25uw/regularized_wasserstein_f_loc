@@ -7,7 +7,6 @@ and explored the resolution of the confidence interval under this new regime.
 Some important difference are listed below:
 
 - LP problems (DKW / Gauss / Wasserstein constraints) are solved with **Gurobi** via JuMP.
-- Conic problems (χ² localization) continue to use a conic solver (default: **Clarabel**).
 - Added **Wasserstein F-localization** with radius options:
   - `:dkw` finite-sample radius via DKW (bounded support)
   - `:bootstrap` bootstrap-calibrated radius
@@ -19,8 +18,9 @@ Some important difference are listed below:
 
 We removed the AMARI method and do not include non-smooth estimands 
 (e.g., indicator-type functionals) in the example experiment configs. The project 
-was designed to run on the hyak cluster using SLURM workload manager, but can be
-adapted to other clusters as well by modifying the top directives.
+was designed to run on the hyak cluster of University of Washington under SLURM 
+workload manager, but can be adapted to other clusters as well by modifying the 
+top directives.
 
 ## Quick start (local)
 
