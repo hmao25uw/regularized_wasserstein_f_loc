@@ -1,7 +1,10 @@
-# NonparBayesCI (rewrite)
+# NonparBayesCI
 
-This is a clean-room rewrite of the F-localization confidence interval code for nonparametric Empirical Bayes,
-with the following updates:
+This project is an adaptation and extension of the F-localization method proposed
+by Nikos Ignatiadis and Stefan Wager in their 2021 paper. In this project, we 
+replaced the sup-norm distance used in the original paper by 1-Wasserstein distance, 
+and explored the resolution of the confidence interval under this new regime. 
+Some important difference are listed below:
 
 - LP problems (DKW / Gauss / Wasserstein constraints) are solved with **Gurobi** via JuMP.
 - Conic problems (χ² localization) continue to use a conic solver (default: **Clarabel**).
@@ -14,8 +17,7 @@ with the following updates:
   - set `[localization] regularization = "smooth"` and provide `smooth_sigma`
   - currently supports `radius_method = "clt"` via `wasserstein_smooth_clt`
 
-We removed the AMARI method and do not include non-smooth estimands (e.g., indicator-type functionals)
-in the example experiment configs.
+We removed the AMARI method and do not include non-smooth estimands (e.g., indicator-type functionals) in the example experiment configs.
 
 ## Quick start (local)
 
@@ -54,7 +56,7 @@ Outputs:
 - CI CSVs: `results/*_ci.csv`
 - Plots: `results/plots/ci_bands.png` and `results/plots/ci_length.png`
 
-## Posterior mean simulation (paper Figure 4-style)
+## Posterior mean simulation
 
 This repository includes a self-contained simulation + plotting pipeline for the
 Gaussian empirical Bayes **posterior mean** experiment used in Ignatiadis & Wager (2021).
@@ -124,7 +126,7 @@ This also defaults to the paper settings, and you may override by passing flags 
 sbatch scripts/slurm/pipeline_fig4_postmean.sbatch --n 2000 --nreps 200
 ```
 
-### Smoke tests (small TOML configs)
+### Smoke tests
 
 The demo configs under `./configs` are intentionally small sanity checks
 and **do not** correspond to the paper's Figure-4 simulation (they use `z0_list = [-2, -1, 0, 1, 2]`).
@@ -153,7 +155,7 @@ On SLURM you can run it via:
 sbatch scripts/slurm/fig2_prostate.sbatch
 ```
 
-### SLURM (recommended): parallel Figure-4 posterior mean via job arrays
+### SLURM: parallel Figure-4 posterior mean via job arrays
 
 For large `nreps` (e.g. 4000) the Figure-4 posterior-mean simulation can be
 slow if run as one sequential SLURM job. The repository includes a **job-array**
