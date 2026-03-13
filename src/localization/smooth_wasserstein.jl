@@ -1,13 +1,16 @@
 # Smooth / regularized Wasserstein-1 helpers ---------------------------------
 
+using LinearAlgebra
+
 """
     kernel_cdf(u; sigma, kernel=:uniform)
 
-CDF of the compactly supported smoothing kernel `η_σ`.
+CDF of the smoothing kernel `η_σ`.
 
-Currently supported kernels:
+Supported kernels:
 
-- `:uniform`: Uniform(-σ, σ)
+- `:uniform`:  Uniform(-σ, σ)   (compact support)
+- `:gaussian`: Normal(0, σ²)    (Gaussian kernel)
 
 This is used for the *smooth Wasserstein* distance from Goldfeld et al. (2024):
 
@@ -32,8 +35,12 @@ For `:uniform`, the kernel CDF is
         else
             return (x + σ) / (2σ)
         end
+    elseif kernel == :gaussian
+        # Gaussian kernel η_σ = Normal(0, σ²)
+        # H_σ(u) = Φ(u/σ)
+        return cdf(Normal(), x / σ)
     else
-        error("Unsupported kernel=$(kernel). Currently supported: :uniform")
+        error("Unsupported kernel=$(kernel). Supported: :uniform, :gaussian")
     end
 end
 
@@ -79,6 +86,16 @@ function smooth_empirical_cdf(z::AbstractVector{<:Real},
             end
             out[k] = s / n
         end
+    elseif kernel == :gaussian
+        # H_σ(t - z_i) = Φ((t - z_i)/σ)
+        @inbounds for k in 1:m
+            t = tf[k]
+            s = 0.0
+            for i in 1:n
+                s += cdf(Normal(), (t - zf[i]) / σ)
+            end
+            out[k] = s / n
+        end
     else
         @inbounds for k in 1:m
             t = tf[k]
@@ -104,6 +121,9 @@ For the uniform kernel, we use
     (F * η_σ)(t) = (1/(2σ)) ∫_{t-σ}^{t+σ} F(u) du,
 
 approximated by the trapezoidal rule with `quad_points` evaluation points.
+
+For the Gaussian kernel, we use Gauss–Hermite quadrature with `quad_points`
+nodes.
 """
 function smooth_cdf(cdf::Function,
                     t::Real,
@@ -130,8 +150,26 @@ function smooth_cdf(cdf::Function,
         end
         integral = Δ * acc
         return integral / (b - a)
+    elseif kernel == :gaussian
+        # Gaussian kernel η_σ = Normal(0, σ²)
+        # (F * η_σ)(t) = E[ F(t - U) ] with U ~ Normal(0, σ²).
+        #
+        # Use Gauss–Hermite quadrature:
+        #   Let U = σ * √2 * X where X has density proportional to exp(-x^2).
+        #   Then E[F(t-U)] = (1/√π) ∫ F(t - σ√2 x) e^{-x^2} dx
+        #                ≈ Σ w_i F(t - σ√2 x_i),
+        # where Σ w_i = 1.
+        x, w = _gh_expectation_rule(qp)
+        scale = σ * sqrt(2.0)
+        tt = Float64(t)
+        μf = Float64(μ)
+        acc = 0.0
+        @inbounds for i in 1:qp
+            acc += w[i] * Float64(cdf(tt - scale * x[i], μf))
+        end
+        return acc
     else
-        error("Unsupported kernel=$(kernel). Currently supported: :uniform")
+        error("Unsupported kernel=$(kernel). Supported: :uniform, :gaussian")
     end
 end
 
@@ -167,4 +205,48 @@ function smooth_cdf_mat(cdf::Function,
         end
     end
     return out
+end
+
+# ---------------------------------------------------------------------------
+# Internal: Gauss–Hermite quadrature rule (expectation form)
+# ---------------------------------------------------------------------------
+
+"""Cache for Gauss–Hermite nodes/weights (expectation-normalized)."""
+const _GH_CACHE = Dict{Int,Tuple{Vector{Float64},Vector{Float64}}}()
+
+"""
+    _gh_expectation_rule(n)
+
+Return `(x, w)` for Gauss–Hermite quadrature in **expectation form**:
+
+    (1/√π) ∫_{-∞}^{∞} f(x) e^{-x^2} dx  ≈  Σ_{i=1}^n w[i] f(x[i]),
+
+where `sum(w) == 1`.
+
+We compute nodes/weights via the Golub–Welsch eigenvalue method.
+"""
+function _gh_expectation_rule(n::Int)
+    n >= 1 || error("Gauss–Hermite order n must be >= 1; got n=$(n)")
+    if haskey(_GH_CACHE, n)
+        return _GH_CACHE[n]
+    end
+
+    if n == 1
+        x = [0.0]
+        w = [1.0]
+        _GH_CACHE[n] = (x, w)
+        return x, w
+    end
+
+    # Jacobi matrix for Hermite polynomials with weight exp(-x^2)
+    β = sqrt.(Float64.(collect(1:(n-1))) ./ 2.0)
+    J = SymTridiagonal(zeros(Float64, n), β)
+    eig = eigen(J)
+
+    x = Vector{Float64}(eig.values)
+    v1 = @view eig.vectors[1, :]
+    w = Vector{Float64}(v1 .^ 2)  # already normalized (sum=1)
+
+    _GH_CACHE[n] = (x, w)
+    return x, w
 end

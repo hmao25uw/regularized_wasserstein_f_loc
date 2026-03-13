@@ -57,6 +57,7 @@ function parse_args(args)
         "clt_B" => nothing,
         "gauss_bw" => nothing,
         "smooth_sigma" => nothing,
+        "smooth_kernel" => nothing,
         "quad_points" => nothing,
         # Optimization settings (must match precompute defaults unless you know what you're doing)
         "lp_time_limit" => 600.0,
@@ -107,6 +108,8 @@ function parse_args(args)
             d["gauss_bw"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--smooth_sigma"
             d["smooth_sigma"] = parse(Float64, args[i+1]); i += 2
+        elseif a == "--smooth_kernel"
+            d["smooth_kernel"] = lowercase(String(args[i+1])); i += 2
         elseif a == "--quad_points"
             d["quad_points"] = parse(Int, args[i+1]); i += 2
         else
@@ -273,6 +276,13 @@ function main(args=ARGS)
     if d["smooth_sigma"] !== nothing && abs(Float64(d["smooth_sigma"]) - Float64(pre.smooth_sigma)) > 1e-12
         sig_arg = d["smooth_sigma"]
         error("Arg mismatch: --smooth_sigma=$(sig_arg) but precompute used smooth_sigma=$(pre.smooth_sigma)")
+    end
+    if d["smooth_kernel"] !== nothing
+        k_arg = Symbol(lowercase(String(d["smooth_kernel"])))
+        k_pre = Symbol(pre.kernel)
+        if k_arg != k_pre
+            error("Arg mismatch: --smooth_kernel=$(k_arg) but precompute used smooth_kernel=$(k_pre)")
+        end
     end
     if d["quad_points"] !== nothing && Int(d["quad_points"]) != Int(pre.quad_points)
         quad_arg = d["quad_points"]

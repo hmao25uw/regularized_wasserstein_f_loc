@@ -70,6 +70,7 @@ function parse_args(args)
         "gauss_bw" => 0.3,
         # Smooth Wasserstein (Goldfeld et al. 2024) parameters
         "smooth_sigma" => 0.25,
+        "smooth_kernel" => "gaussian",   # uniform | gaussian
         "quad_points" => 33,
         # (Ignored here) LP / solver knobs, accepted so the SLURM submit
         # helper can pass the same arg list to all stages.
@@ -127,6 +128,8 @@ function parse_args(args)
             d["gauss_bw"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--smooth_sigma"
             d["smooth_sigma"] = parse(Float64, args[i+1]); i += 2
+        elseif a == "--smooth_kernel"
+            d["smooth_kernel"] = lowercase(String(args[i+1])); i += 2
         elseif a == "--quad_points"
             d["quad_points"] = parse(Int, args[i+1]); i += 2
         elseif a == "--lp_time_limit"
@@ -248,6 +251,7 @@ function precompute_one_prior(spec;
                               x_points::Int,
                               gauss_bw::Float64,
                               smooth_sigma::Float64,
+                              smooth_kernel::String,
                               quad_points::Int)
 
     σ = 1.0
@@ -265,10 +269,13 @@ function precompute_one_prior(spec;
                                                       support=(t_min, t_max), B=clt_B)
     loc_w_boot = NonparBayesCI.WassersteinLocalization(alpha=alpha, t_grid=t_grid, radius_method=:bootstrap, B=boot_B)
     loc_w_clt = NonparBayesCI.WassersteinLocalization(alpha=alpha, t_grid=t_grid, radius_method=:clt, B=clt_B)
+    kernel_sym = Symbol(lowercase(String(smooth_kernel)))
+    kernel_sym in (:uniform, :gaussian) || error("smooth_kernel must be 'uniform' or 'gaussian'; got $(smooth_kernel)")
+
     loc_smooth = NonparBayesCI.WassersteinLocalization(alpha=alpha, t_grid=t_grid, radius_method=:clt, B=clt_B,
                                                        regularization=:smooth,
                                                        smooth_sigma=smooth_sigma,
-                                                       kernel=:uniform,
+                                                       kernel=kernel_sym,
                                                        quad_points=quad_points)
 
     # Use the package's preparation routines to avoid any mismatch.
@@ -358,7 +365,7 @@ function precompute_one_prior(spec;
         # smooth params
         smooth_sigma = smooth_sigma,
         quad_points = quad_points,
-        kernel = :uniform,
+        kernel = kernel_sym,
         # stats
         dkw = (Fhat=Fhat_dkw, eps=eps_dkw),
         gauss = (fhat=fhat_gauss, c=c_gauss),
@@ -421,6 +428,7 @@ function main(args=ARGS)
             x_points = d["x_points"],
             gauss_bw = d["gauss_bw"],
             smooth_sigma = d["smooth_sigma"],
+            smooth_kernel = d["smooth_kernel"],
             quad_points = d["quad_points"],
         ))
     end

@@ -50,6 +50,7 @@ function parse_args(args)
         "block_size" => nothing,
         "gauss_bw" => nothing,
         "smooth_sigma" => nothing,
+        "smooth_kernel" => nothing,
         "quad_points" => nothing,
         "lp_time_limit" => nothing,
         "gurobi_threads" => nothing,
@@ -63,7 +64,7 @@ function parse_args(args)
         elseif a in ("--prior", "--n", "--nreps", "--alpha", "--seed",
                      "--zmin", "--zmax", "--zstep", "--boot_B", "--clt_B",
                      "--block_size",
-                     "--gauss_bw", "--smooth_sigma", "--quad_points",
+                     "--gauss_bw", "--smooth_sigma", "--smooth_kernel", "--quad_points",
                      "--lp_time_limit", "--gurobi_threads", "--gurobi_seed")
             # Ignore (advance by 2 for flags that expect a value)
             i += 2
@@ -88,61 +89,6 @@ function method_style(method::AbstractString)
     # Dotted for original Ignatiadis & Wager methods; solid for our new ones.
     if method in ("DKW-F", "Gauss-F")
         return :dot
-    else
-        return :solid
-    end
-end
-
-# --- New plotting controls for CI-band figure ---
-
-const NO_RIBBON_METHODS = Set(["DKW-F", "Gauss-F", "W₁ (DKW)"])
-
-# Keep ribbons ONLY for these three:
-const RIBBON_METHODS = Set(["W₁ (boot)", "W₁ (CLT)", "Smooth-W₁ (CLT)"])
-
-# Almost-transparent ribbons
-const RIBBON_FILLALPHA = 0.10  # decrease more (e.g. 0.06) if you want even lighter
-
-# Styling: emphasize our 3 Wasserstein methods, de-emphasize others
-function method_color(method::AbstractString)
-    if method == "DKW-F"
-        return :darkorange
-    elseif method == "Gauss-F"
-        return :dodgerblue
-    elseif method == "W₁ (DKW)"
-        return :mediumpurple
-    elseif method == "W₁ (boot)"
-        return :forestgreen
-    elseif method == "W₁ (CLT)"
-        return :crimson
-    elseif method == "Smooth-W₁ (CLT)"
-        return :teal
-    else
-        return :black
-    end
-end
-
-function method_lw(method::AbstractString)
-    return method in RIBBON_METHODS ? 4 : 2.5
-end
-
-function method_linealpha(method::AbstractString)
-    return method in RIBBON_METHODS ? 1.0 : 0.65
-end
-
-# For the CI-band figure ONLY, give the 3 Wasserstein methods distinct line styles
-# (still not dotted, so they read as “solid/straight” compared to the original dotted ones).
-function method_style_band(method::AbstractString)
-    if method in ("DKW-F", "Gauss-F")
-        return :dot
-    elseif method == "W₁ (DKW)"
-        return :dash
-    elseif method == "W₁ (boot)"
-        return :solid
-    elseif method == "W₁ (CLT)"
-        return :dash
-    elseif method == "Smooth-W₁ (CLT)"
-        return :dashdot
     else
         return :solid
     end
@@ -272,41 +218,19 @@ function aggregate_one_prior(outdir::String, prior_key::String; block_size::Int)
         title = "Posterior mean CI bands ($(prior_label)), n=$(pre.n), reps=$(pre.nreps)",
         legend = :topleft,
     )
-    # Thicker true curve
-    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=4)
+    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=2)
 
     for meth in methods
         dfi = filter(:method => ==(meth), df_all)
         sort!(dfi, :z0)
-
-        col = method_color(meth)
-        lw  = method_lw(meth)
-        la  = method_linealpha(meth)
-        ls  = method_style_band(meth)
-
-        if meth in NO_RIBBON_METHODS
-            # No ribbon: draw ONLY the lower & upper as two lines (no fill)
-            plot!(p_band, dfi.z0, dfi.lower;
-                label="",
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-
-            plot!(p_band, dfi.z0, dfi.upper;
-                label=meth,   # label once
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-        else
-            # Ribbon only for: W₁ (boot), W₁ (CLT), Smooth-W₁ (CLT)
-            center = (dfi.lower .+ dfi.upper) ./ 2
-            ribbon = (dfi.upper .- dfi.lower) ./ 2
-
-            plot!(p_band, dfi.z0, center;
-                ribbon=ribbon,
-                fillalpha=RIBBON_FILLALPHA,
-                label=meth,
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-        end
+        center = (dfi.lower .+ dfi.upper) ./ 2
+        ribbon = (dfi.upper .- dfi.lower) ./ 2
+        plot!(p_band, dfi.z0, center;
+              ribbon=ribbon,
+              label=meth,
+              linestyle=method_style(meth),
+              lw=2,
+              marker=:none)
     end
 
     band_path = joinpath(plots_dir, "postmean_ci_bands_$(prior_key).png")

@@ -1,4 +1,4 @@
-# NonparBayesCI
+# Smooth Wasserstein F-localization for Empirical Bayes Confidence Interval 
 
 This project is an adaptation and extension of the F-localization method proposed
 by Nikos Ignatiadis and Stefan Wager in their 2021 paper. In this project, we 
@@ -20,9 +20,9 @@ We removed the AMARI method and do not include non-smooth estimands
 (e.g., indicator-type functionals) in the example experiment configs. The project 
 was designed to run on the hyak cluster of University of Washington under SLURM 
 workload manager, but can be adapted to other clusters as well by modifying the 
-top directives.
+top directives. 
 
-## Quick start (local)
+## Quick Start (local option)
 
 From the repository root:
 
@@ -62,7 +62,7 @@ Outputs:
 ## Posterior mean simulation
 
 This repository includes a self-contained simulation + plotting pipeline for the
-Gaussian empirical Bayes **posterior mean** experiment used in Ignatiadis & Wager (2021).
+Gaussian empirical Bayes **posterior mean** experiment from Ignatiadis & Wager (2021).
 
 It produces **four** figures:
 

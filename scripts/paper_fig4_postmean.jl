@@ -73,6 +73,7 @@ function parse_args(args)
         "gauss_bw" => 0.3,
         # Smooth Wasserstein (Goldfeld et al. 2024) parameters
         "smooth_sigma" => 0.25,
+        "smooth_kernel" => "gaussian",   # uniform | gaussian
         "quad_points" => 33,
     )
 
@@ -105,6 +106,12 @@ function parse_args(args)
             d["lp_time_limit"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--gurobi_threads"
             d["gurobi_threads"] = parse(Int, args[i+1]); i += 2
+        elseif a == "--smooth_sigma"
+            d["smooth_sigma"] = parse(Float64, args[i+1]); i += 2
+        elseif a == "--smooth_kernel"
+            d["smooth_kernel"] = lowercase(String(args[i+1])); i += 2
+        elseif a == "--quad_points"
+            d["quad_points"] = parse(Int, args[i+1]); i += 2
         else
             error("Unknown argument: $a")
         end
@@ -257,6 +264,7 @@ function run_one_prior(; prior::String,
                         x_points::Int,
                         gauss_bw::Float64,
                         smooth_sigma::Float64,
+                        smooth_kernel::String,
                         quad_points::Int)
 
     spec = prior_spec(prior)
@@ -280,6 +288,9 @@ function run_one_prior(; prior::String,
         gurobi_seed=1,
     )
 
+    kernel_sym = Symbol(lowercase(String(smooth_kernel)))
+    kernel_sym in (:uniform, :gaussian) || error("smooth_kernel must be 'uniform' or 'gaussian'; got $(smooth_kernel)")
+
     # Localization methods to compare
     methods = [
         (name="DKW-F",          loc=NonparBayesCI.DKWLocalization(alpha=alpha, t_grid=t_grid),
@@ -296,7 +307,7 @@ function run_one_prior(; prior::String,
         (name="Smooth-W₁ (CLT)",loc=NonparBayesCI.WassersteinLocalization(alpha=alpha, t_grid=t_grid, radius_method=:clt, B=clt_B,
                                                                           regularization=:smooth,
                                                                           smooth_sigma=smooth_sigma,
-                                                                          kernel=:uniform,
+                                                                          kernel=kernel_sym,
                                                                           quad_points=quad_points),
                                 linestyle=:solid, kind=:new),
     ]
@@ -312,7 +323,7 @@ function run_one_prior(; prior::String,
     caches["Gauss-F"] = (PdfMat=pdf_mat(lik.pdf, x_grid, mu_grid),)
     caches["Smooth-W₁ (CLT)"] = (Ccdf=NonparBayesCI.smooth_cdf_mat(lik.cdf, sort(t_grid), mu_grid;
                                                                    sigma=smooth_sigma,
-                                                                   kernel=:uniform,
+                                                                   kernel=kernel_sym,
                                                                    quad_points=quad_points),)
 
     # Output
@@ -437,54 +448,6 @@ function run_one_prior(; prior::String,
     # ------------------------------------------------------------------
     # Plot 1: CI bands
     # ------------------------------------------------------------------
-    # --- New plotting controls for CI-band figure ---
-
-    const NO_RIBBON_METHODS = Set(["DKW-F", "Gauss-F", "W₁ (DKW)"])
-    const RIBBON_METHODS = Set(["W₁ (boot)", "W₁ (CLT)", "Smooth-W₁ (CLT)"])
-    const RIBBON_FILLALPHA = 0.10
-
-    function method_color(method::AbstractString)
-        if method == "DKW-F"
-            return :darkorange
-        elseif method == "Gauss-F"
-            return :dodgerblue
-        elseif method == "W₁ (DKW)"
-            return :mediumpurple
-        elseif method == "W₁ (boot)"
-            return :forestgreen
-        elseif method == "W₁ (CLT)"
-            return :crimson
-        elseif method == "Smooth-W₁ (CLT)"
-            return :teal
-        else
-            return :black
-        end
-    end
-
-    function method_lw(method::AbstractString)
-        return method in RIBBON_METHODS ? 4 : 2.5
-    end
-
-    function method_linealpha(method::AbstractString)
-        return method in RIBBON_METHODS ? 1.0 : 0.65
-    end
-
-    function method_style_band(method::AbstractString)
-        if method in ("DKW-F", "Gauss-F")
-            return :dot
-        elseif method == "W₁ (DKW)"
-            return :dash
-        elseif method == "W₁ (boot)"
-            return :solid
-        elseif method == "W₁ (CLT)"
-            return :dash
-        elseif method == "Smooth-W₁ (CLT)"
-            return :dashdot
-        else
-            return :solid
-        end
-    end
-
     p_band = plot(
         xlabel = "z",
         ylabel = "posterior mean θ(z)",
@@ -492,37 +455,17 @@ function run_one_prior(; prior::String,
         legend = :topleft,
     )
 
-    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=4)
+    plot!(p_band, z0_grid, theta_true; label="True posterior mean", color=:black, lw=2)
 
     for (midx, meth) in enumerate(methods)
-        name = String(meth.name)
-
-        col = method_color(name)
-        lw  = method_lw(name)
-        la  = method_linealpha(name)
-        ls  = method_style_band(name)
-
-        if name in NO_RIBBON_METHODS
-            plot!(p_band, z0_grid, vec(lower_mean[midx, :]);
-                label="",
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-
-            plot!(p_band, z0_grid, vec(upper_mean[midx, :]);
-                label=name,
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-        else
-            center = (lower_mean[midx, :] .+ upper_mean[midx, :]) ./ 2
-            ribbon = (upper_mean[midx, :] .- lower_mean[midx, :]) ./ 2
-
-            plot!(p_band, z0_grid, vec(center);
-                ribbon=vec(ribbon),
-                fillalpha=RIBBON_FILLALPHA,
-                label=name,
-                color=col, linestyle=ls, lw=lw,
-                linealpha=la, marker=:none)
-        end
+        center = (lower_mean[midx, :] .+ upper_mean[midx, :]) ./ 2
+        ribbon = (upper_mean[midx, :] .- lower_mean[midx, :]) ./ 2
+        plot!(p_band, z0_grid, center;
+              ribbon=ribbon,
+              label=meth.name,
+              linestyle=meth.linestyle,
+              lw=2,
+              marker=:none)
     end
 
     band_path = joinpath(plots_dir, "postmean_ci_bands_$(lowercase(spec.label)).png")
@@ -584,6 +527,7 @@ function main(args=ARGS)
         x_points = d["x_points"],
         gauss_bw = d["gauss_bw"],
         smooth_sigma = d["smooth_sigma"],
+        smooth_kernel = d["smooth_kernel"],
         quad_points = d["quad_points"],
     )
 end

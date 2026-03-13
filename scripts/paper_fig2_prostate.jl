@@ -84,6 +84,7 @@ function parse_args(args)
 
         # Smooth Wasserstein parameters
         "smooth_sigma" => 0.25,
+        "smooth_kernel" => "gaussian",   # uniform | gaussian
         "quad_points" => 33,
 
         # LP settings
@@ -141,6 +142,8 @@ function parse_args(args)
             d["gauss_bw"] = parse(Float64, args[i+1]); i += 2
         elseif a == "--smooth_sigma"
             d["smooth_sigma"] = parse(Float64, args[i+1]); i += 2
+        elseif a == "--smooth_kernel"
+            d["smooth_kernel"] = lowercase(String(args[i+1])); i += 2
         elseif a == "--quad_points"
             d["quad_points"] = parse(Int, args[i+1]); i += 2
         elseif a == "--lp_time_limit"
@@ -319,6 +322,8 @@ function main(args::Vector{String})
     clt_B  = Int(par["clt_B"])
     gauss_bw = Float64(par["gauss_bw"])
     smooth_sigma = Float64(par["smooth_sigma"])
+    kernel_sym = Symbol(lowercase(String(par["smooth_kernel"])))
+    kernel_sym in (:uniform, :gaussian) || error("smooth_kernel must be 'uniform' or 'gaussian'; got $(par["smooth_kernel"]) ")
     quad_points = Int(par["quad_points"])
 
     solver = NonparBayesCI.SolverConfig(
@@ -344,7 +349,7 @@ function main(args::Vector{String})
         (name="Smoothed_Wasserstein_clt", loc=NonparBayesCI.WassersteinLocalization(alpha=alpha, t_grid=t_grid, radius_method=:clt, B=clt_B,
                                                                            regularization=:smooth,
                                                                            smooth_sigma=smooth_sigma,
-                                                                           kernel=:uniform,
+                                                                           kernel=kernel_sym,
                                                                            quad_points=quad_points),
                                  linestyle=:solid, kind=:new),
     ]
@@ -358,7 +363,7 @@ function main(args::Vector{String})
     caches["Gauss-F-Loc"] = (PdfMat=pdf_mat(lik.pdf, x_grid, u_grid),)
     caches["Smoothed_Wasserstein_clt"] = (Ccdf=NonparBayesCI.smooth_cdf_mat(lik.cdf, sort(t_grid), u_grid;
                                                                     sigma=smooth_sigma,
-                                                                    kernel=:uniform,
+                                                                    kernel=kernel_sym,
                                                                     quad_points=quad_points),)
 
     rng = MersenneTwister(seed)
