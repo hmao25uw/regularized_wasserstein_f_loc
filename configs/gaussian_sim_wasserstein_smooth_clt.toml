@@ -35,7 +35,7 @@ B = 2000
 # Regularization controls the kernel smoothing
 regularization = "smooth"   # "none" | "smooth"
 smooth_sigma = 0.25         # kernel half-width σ
-kernel = "uniform"         # currently only "uniform"
+kernel = "gaussian"        # "uniform" | "gaussian"
 quad_points = 33            # trapezoidal points for convolving model CDF
 
 # Grid for the LP discretization (t-grid)
